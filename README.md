@@ -12,5 +12,5 @@
 - Author: Dương Thị Hòa Bình - K41 - Đại học Sư Phạm Tp. HCM
 
 # Lời cám ơn:
-Cám ơn thầy Nguyễn Đình Hiển đã đưa ra các bài học hay và thú vị về bộ môn.
-Cám ơn tới chị Hòa Bình K41 đã chia sẻ và cho phép nhóm sử dụng Notebooks để thực hiện train model.
+- Cám ơn thầy Nguyễn Đình Hiển đã đưa ra các bài học hay và thú vị về bộ môn.
+- Cám ơn tới chị Hòa Bình K41 đã chia sẻ và cho phép nhóm sử dụng Notebooks để thực hiện train model.
