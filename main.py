@@ -9,12 +9,13 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         super().__init__()
 
         uic.loadUi('ui/fMain.ui', self)
-        '''preloaded'''
-        self.original_image = None
-        self.image = None
-        self.path = ''
-
+        self.show()
         '''Find Children'''
+        #layouts
+        # self.layout_: QtWidgets.QLayout = self.findChild(QtWidgets.QLayout, 'layout_')
+        self.hlayout_buttons: QtWidgets.QLayout = self.findChild(QtWidgets.QLayout, 'hlayout_buttons')
+        self.vlayout_canvas: QtWidgets.QLayout = self.findChild(QtWidgets.QLayout, 'vlayout_canvas')
+
         # labels
         # self.lbl_: QtWidgets.QLabel = self.findChild(QtWidgets.QLabel, 'lbl_')
         self.lbl_canvas: QtWidgets.QLabel = self.findChild(QtWidgets.QLabel, 'lbl_canvas')
@@ -29,6 +30,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         # actions
         self.actionOpen: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionOpen')
         self.actionExit: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionExit')
+        self.actionNew: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionNew')
         '''end findChildren'''
         '''connection'''
         # is_clicked
@@ -36,14 +38,22 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.btn_open.clicked.connect(lambda: self.isClicked('open'))
         self.btn_clear.clicked.connect(lambda: self.isClicked('clear'))
         self.btn_detect.clicked.connect(lambda: self.isClicked('detect'))
+
         # buttons
         # self.btn_apply.clicked.connect(self.test_combobox)
         self.btn_open.clicked.connect(self.openFile)
+        self.btn_clear.clicked.connect(self.clearCanvas)
         # actions
         self.actionOpen.triggered.connect(self.openFile)
+        self.actionNew.triggered.connect(self.newCanvas)
         '''end connection'''
-
-        self.show()
+        '''preloaded'''
+        self.original_image = None
+        self.image = None
+        self.path = ''
+        self.default_width = self.lbl_canvas.width()-4
+        self.default_height = self.lbl_canvas.height()-8
+        print(self.default_width, self.default_height)
 
     def isClicked(self, obj: str):
         '''
@@ -52,6 +62,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         :return: None
         '''
         print("{} was clicked".format(obj))
+        print(self.lbl_canvas.size().width())
 
     def openFile(self):
         filename = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', '', 'Image files (*.png *.xpm *.jpg *.tif)')
@@ -74,6 +85,23 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
             label.setPixmap(QtGui.QPixmap(q_img))
         else:
             print("Warning: self.image is empty.")
+
+    def newCanvas(self):
+        canvas = self.createCanvas()
+        self.lbl_canvas.setPixmap(canvas)
+
+    def clearCanvas(self):
+        width = self.lbl_canvas.width()-4
+        height = self.lbl_canvas.height()-4
+        canvas = self.createCanvas(width, height)
+        self.lbl_canvas.setPixmap(canvas)
+
+    def createCanvas(self, width: int = None, height: int = None, color = '#ffffff'):
+        if width is None: width = self.default_width
+        if height is None: height = self.default_height
+        canvas = QtGui.QPixmap(width, height)
+        canvas.fill(QtGui.QColor(color))
+        return canvas
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
