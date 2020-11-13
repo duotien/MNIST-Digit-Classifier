@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0">
       <property name="spacing">
        <number>6</number>
       </property>
@@ -24,7 +24,7 @@
        <enum>QLayout::SetDefaultConstraint</enum>
       </property>
       <item>
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QPushButton" name="btn_open">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -32,12 +32,12 @@
          </size>
         </property>
         <property name="text">
-         <string>PushButton</string>
+         <string>Open</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="btn_clear">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -45,12 +45,12 @@
          </size>
         </property>
         <property name="text">
-         <string>PushButton</string>
+         <string>Clear</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="btn_detect">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -58,9 +58,22 @@
          </size>
         </property>
         <property name="text">
-         <string>PushButton</string>
+         <string>Detect</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </item>
@@ -510,6 +523,9 @@
           </disabled>
          </palette>
         </property>
+        <property name="mouseTracking">
+         <bool>true</bool>
+        </property>
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
@@ -598,6 +614,11 @@
    </property>
   </action>
  </widget>
+ <tabstops>
+  <tabstop>btn_open</tabstop>
+  <tabstop>btn_clear</tabstop>
+  <tabstop>btn_detect</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
