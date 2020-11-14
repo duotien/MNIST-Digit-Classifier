@@ -2,7 +2,7 @@ import sys
 import cv2
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-
+from tensorflow.keras import models
 
 class Canvas(QtWidgets.QLabel):
     def __init__(self):
@@ -83,16 +83,33 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         '''end findChildren'''
         '''preloaded'''
         self.init_connection()
-        self.init_variable()
-
-    def init_variable(self):
-        self.image = None
+        #self.init_variable()
+        self.last_state_image = None
+        self.backup_image = None
         self.cv_image = None
         self.path = ''
         self.default_width = self.lbl_canvas.width() - 4
         self.default_height = self.lbl_canvas.height() - 8
         self.last_x, self.last_y = None, None
 
+        self.model = models.load_model('model/emnist_final.h5')
+
+        self.is_detecting = False
+        self.is_drawing = False
+        self.pen_size = 4
+        self.pen_color = QtCore.Qt.black
+
+    def init_variable(self):
+        self.backup_image = None
+        self.cv_image = None
+        self.path = ''
+        self.default_width = self.lbl_canvas.width() - 4
+        self.default_height = self.lbl_canvas.height() - 8
+        self.last_x, self.last_y = None, None
+
+        self.model = models.load_model('model/emnist_final.h5')
+
+        self.is_detecting = False
         self.is_drawing = False
         self.pen_size = 4
         self.pen_color = QtCore.Qt.black
@@ -108,6 +125,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         # self.btn_apply.clicked.connect(self.test_combobox)
         self.btn_open.clicked.connect(self.openFile)
         self.btn_clear.clicked.connect(self.clearCanvas)
+        self.btn_detect.clicked.connect(self.detect)
         # actions
         self.actionOpen.triggered.connect(self.openFile)
         self.actionNew.triggered.connect(self.newCanvas)
@@ -127,39 +145,52 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         if filename[0] != '' and filename[0] != None:
             self.path = filename[0]
             self.cv_image = cv2.imread(filename[0])
+            self.backup_image = QtGui.QPixmap(self.convertMatToQImage(self.cv_image))
             self.showImage(self.lbl_canvas, self.cv_image)
         else:
             print("invalid file")
 
     def showImage(self, label: QtWidgets.QLabel, cv_img=None):
-        if cv_img is None:
-            cv_img = self.cv_image
         if cv_img is not None:
-            height, width = cv_img.shape[:2]
-            bytes_per_line = 3 * width
-            self.image = QtGui.QImage(cv_img.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888).rgbSwapped()
-            label.setPixmap(QtGui.QPixmap(self.image))
+            image = self.convertMatToQImage(cv_img)
+            image = QtGui.QPixmap(image)
+            label.setPixmap(image)
         else:
             print("Warning: self.cv_image is empty.")
 
+    def convertMatToQImage(self, mat: np.ndarray=None):
+        if mat is not None:
+            height, width = mat.shape[:2]
+            bytes_per_line = 3 * width
+            image = QtGui.QImage(mat.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888).rgbSwapped()
+            return image
+
     def saveImage(self):
-        if self.image is not None:
+        if self.lbl_canvas.pixmap() is not None:
             filePath, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save Image", "untitled.png",
                                                       "PNG(*.png);;JPEG(*.jpg *.jpeg);;All Files(*.*) ")
 
             if filePath == "":
                 return
-            self.image.save(filePath)
+            self.lbl_canvas.pixmap().save(filePath)
 
     def newCanvas(self):
-        self.image = self.createCanvas()
-        self.lbl_canvas.setPixmap(self.image)
+        self.backup_image = None
+        self.cv_image = None
+        self.path = ''
+        self.is_detecting = False
+        self.is_drawing = False
+        self.btn_detect.setText("Detect")
+        self.switchDrawingMode(True)
+        self.backup_image = self.createCanvas()
+        self.lbl_canvas.setPixmap(self.backup_image)
 
     def clearCanvas(self):
-        width = self.lbl_canvas.width() - 4
-        height = self.lbl_canvas.height() - 4
-        self.image = self.createCanvas(width, height)
-        self.lbl_canvas.setPixmap(self.image)
+        if self.lbl_canvas.pixmap() is not None:
+            # width = self.lbl_canvas.pixmap().width()
+            # height = self.lbl_canvas.pixmap().height()
+            # self.backup_image = self.createCanvas(width, height)
+            self.lbl_canvas.setPixmap(self.backup_image)
 
     def createCanvas(self, width: int = None, height: int = None, color='#ffffff'):
         if width is None: width = self.default_width
@@ -169,15 +200,30 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         return canvas
 
     def mousePressEvent(self, e):
-        # if left mouse button is pressed
-        if e.button() == QtCore.Qt.LeftButton:
-            # make drawing flag true
-            self.is_drawing = True
-            self.last_x, self.last_y = e.x(), e.y()
-            #print(self.last_x, self.last_y, self.is_drawing)
+        if self.lbl_canvas.pixmap() is not None:
+            if e.button() == QtCore.Qt.LeftButton and not self.is_detecting:
+                self.is_drawing = True
+
+                self.last_x, self.last_y = e.x(), e.y()
+
+                lbl_canvas_pos = self.lbl_canvas.mapTo(self, QtCore.QPoint(0, 0))
+
+                painter = QtGui.QPainter(self.lbl_canvas.pixmap())
+                painter.setWindow(lbl_canvas_pos.x(), lbl_canvas_pos.y(), self.lbl_canvas.pixmap().width(),
+                                  self.lbl_canvas.pixmap().height())
+                p = painter.pen()
+                p.setWidth(self.pen_size)
+                p.setColor(self.pen_color)
+                painter.setPen(p)
+                painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
+                painter.end()
+                self.lbl_canvas.update()
+                #self.image = self.lbl_canvas.pixmap()
+
+                print(self.last_x, self.last_y, self.is_drawing)
 
     def mouseMoveEvent(self, e):
-        if self.lbl_canvas.pixmap() is not None and self.is_drawing:
+        if self.lbl_canvas.pixmap() is not None and self.is_drawing and not self.is_detecting:
             if self.last_x is None:  # First event.
                 self.last_x = e.x()
                 self.last_y = e.y()
@@ -195,8 +241,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
             painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
             painter.end()
             self.lbl_canvas.update()
-            self.image = self.lbl_canvas.pixmap()
-
+            #self.image = self.lbl_canvas.pixmap()
 
             # Update the origin for next time.
             self.last_x = e.x()
@@ -209,12 +254,94 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
             self.is_drawing = False
             #print(self.last_x, self.last_y, self.is_drawing)
 
-    def paintEvent(self, event):
+    # def paintEvent(self, event):
+    #     if self.lbl_canvas.pixmap() is not None:
+    #         width = self.lbl_canvas.width()
+    #         height = self.lbl_canvas.height()
+    #         self.lbl_canvas.pixmap().scaled(width, height)
+    #         #self.lbl_canvas.setPixmap(self.lbl_canvas.pixmap().scaled(width, height))
+    #         #print("paint")
+
+    def detect(self, image):
         if self.lbl_canvas.pixmap() is not None:
-            width = self.lbl_canvas.width()
-            height = self.lbl_canvas.height()
-            self.lbl_canvas.pixmap().scaled(width, height)
-            #print("paint")
+            if not self.is_detecting:
+                self.is_detecting = True
+                self.btn_detect.setText("Stop")
+
+                self.last_state_image = QtGui.QPixmap(self.lbl_canvas.pixmap())
+
+                self.switchDrawingMode(False)
+
+                image = self.convertQImageToMat(self.lbl_canvas.pixmap())
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                blur = cv2.GaussianBlur(gray, (7, 7), 0)
+                thre = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 7, 2)
+                #cv2.imshow('test',thre)
+                contours, hierarchy = cv2.findContours(thre, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                rects = [cv2.boundingRect(cnt) for cnt in contours]
+
+                cv2.waitKey()
+                for i in contours:
+                    # contours sẽ chỉ được tính nếu có kích thước lớn hơn 100 (nhằm loại bỏ các vật thể nhiễu)
+                    if cv2.contourArea(i) < 100:
+                        continue
+
+                    # Hàm cv2.boundingRect() giúp tìm ra Bounding box hình chữ nhật đứng.
+                    (x, y, w, h) = cv2.boundingRect(i)
+
+                    # Vẽ hình chữ nhật bao quanh vật thể với bounding box vừa tìm được
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
+                    # Lấy ra một ảnh chỉ chứa một vật thể dựa vào bounding box
+                    # resize lại kích thước phù hợp với model để có thể dự đoán
+                    roi = thre[y:y + h, x:x + w]
+                    roi = np.pad(roi, (20, 20), 'constant', constant_values=(0, 0))
+                    roi = cv2.resize(roi, (28, 28), interpolation=cv2.INTER_AREA)
+                    roi = cv2.dilate(roi, (3, 3))
+
+                    # Hàm predict_classes trả về class có xác suất lớn nhất
+                    y_predict = self.model.predict_classes(roi.reshape(1, 28, 28, 1))
+
+                    # Gắn chữ đã dự đoán được lên ảnh ban đầu
+                    cv2.putText(image, str(chr(ord('A') + y_predict - 1)), (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0),
+                                1)
+
+                # In ra ảnh đã được dự đoán tất cả các chữ viết
+                #cv2.imshow('test',image)
+                #cv2.waitKey()
+                #cv2.destroyAllWindows()
+                print(image.shape)
+                self.showImage(self.lbl_canvas, image)
+            else:
+                self.is_detecting = False
+                self.btn_detect.setText("Detect")
+                self.switchDrawingMode(True)
+
+                if self.last_state_image is not None:
+                    self.lbl_canvas.setPixmap(self.last_state_image)
+                else:
+                    self.lbl_canvas.setPixmap(self.backup_image)
+
+    def switchDrawingMode(self, switch: bool):
+        self.btn_clear.setEnabled(switch)
+        self.btn_open.setEnabled(switch)
+
+    def convertQImageToMat(self, pixmap = None):
+        '''  Converts a QImage into an opencv MAT format  '''
+        if pixmap is None:
+            pixmap = self.image
+        if pixmap is not None:
+            if type(pixmap) is QtGui.QPixmap:
+                new_qimage = pixmap.toImage().convertToFormat(QtGui.QImage.Format_RGBA8888)
+
+            width = new_qimage.width()
+            height = new_qimage.height()
+
+            ptr = new_qimage.bits()
+            ptr.setsize(new_qimage.byteCount())
+            arr = np.array(ptr).reshape(height, width, 4)  # Copies the data
+            arr = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+            return arr
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
