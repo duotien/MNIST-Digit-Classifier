@@ -74,6 +74,8 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.btn_detect: QtWidgets.QPushButton = self.findChild(QtWidgets.QPushButton, 'btn_detect')
         # self.menuFile = self.findChild(QtWidgets.)
         # self.menuABout = self.findChild(QtWidgets.)
+        # spinbox
+        self.sbox_brush_size: QtWidgets.QSpinBox = self.findChild(QtWidgets.QSpinBox, 'sbox_brush_size')
 
         # actions
         self.actionOpen: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionOpen')
@@ -81,8 +83,30 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.actionNew: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionNew')
         self.actionSave: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'actionSave')
         '''end findChildren'''
+
+        '''Connection'''
+        # is_clicked
+        # self.btn_.clicked.connect(lambda: self.isClicked('btn_'))
+        self.btn_open.clicked.connect(lambda: self.isClicked('open'))
+        self.btn_clear.clicked.connect(lambda: self.isClicked('clear'))
+        self.btn_detect.clicked.connect(lambda: self.isClicked('detect'))
+
+        # buttons
+        # self.btn_apply.clicked.connect(self.test_combobox)
+        self.btn_open.clicked.connect(self.openFile)
+        self.btn_clear.clicked.connect(self.clearCanvas)
+        self.btn_detect.clicked.connect(self.detect)
+
+        # spinboxes
+        self.sbox_brush_size.valueChanged.connect(self.changeBrushSize)
+
+        # actions
+        self.actionOpen.triggered.connect(self.openFile)
+        self.actionNew.triggered.connect(self.newCanvas)
+        self.actionSave.triggered.connect(self.saveImage)
+        '''end Connection'''
         '''preloaded'''
-        self.init_connection()
+        #self.init_connection()
         #self.init_variable()
         self.last_state_image = None
         self.backup_image = None
@@ -325,6 +349,9 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
     def switchDrawingMode(self, switch: bool):
         self.btn_clear.setEnabled(switch)
         self.btn_open.setEnabled(switch)
+
+    def changeBrushSize(self):
+        self.pen_size = self.sbox_brush_size.value()
 
     def convertQImageToMat(self, pixmap = None):
         '''  Converts a QImage into an opencv MAT format  '''
