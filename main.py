@@ -300,11 +300,11 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 blur = cv2.GaussianBlur(gray, (7, 7), 0)
                 thre = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 7, 2)
-                #cv2.imshow('test',thre)
-                contours, hierarchy = cv2.findContours(thre, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                rects = [cv2.boundingRect(cnt) for cnt in contours]
 
-                cv2.waitKey()
+                contours, hierarchy = cv2.findContours(thre, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                offset = 10
+
                 for i in contours:
                     # contours sẽ chỉ được tính nếu có kích thước lớn hơn 100 (nhằm loại bỏ các vật thể nhiễu)
                     if cv2.contourArea(i) < 100:
@@ -314,7 +314,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                     (x, y, w, h) = cv2.boundingRect(i)
 
                     # Vẽ hình chữ nhật bao quanh vật thể với bounding box vừa tìm được
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                    cv2.rectangle(image, (x - offset, y - offset), (x + w + offset, y + h + offset), (0, 0, 255), 2)
 
                     # Lấy ra một ảnh chỉ chứa một vật thể dựa vào bounding box
                     # resize lại kích thước phù hợp với model để có thể dự đoán
@@ -324,10 +324,11 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                     roi = cv2.dilate(roi, (3, 3))
 
                     # Hàm predict_classes trả về class có xác suất lớn nhất
-                    y_predict = self.model.predict_classes(roi.reshape(1, 28, 28, 1))
+                    #y_predict = self.model.predict_classes(roi.reshape(1, 28, 28, 1))
+                    y_predict = np.argmax(self.model.predict(roi.reshape(1, 28, 28, 1)), axis=-1)
 
                     # Gắn chữ đã dự đoán được lên ảnh ban đầu
-                    cv2.putText(image, str(chr(ord('A') + y_predict - 1)), (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0),
+                    cv2.putText(image, str(chr(ord('A') + y_predict - 1)), (x, y - offset - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0),
                                 1)
 
                 # In ra ảnh đã được dự đoán tất cả các chữ viết
@@ -373,6 +374,4 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     tmp = Ui_MainWindow()
-    #canvas = Canvas()
-    #canvas.show()
     app.exec_()
